@@ -4,88 +4,90 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from scipy.stats import norm
 
-def plot (values, approx=None, approx_type='linear', xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.', 
-                          zoom_factor=0.1, x_limits=None, y_limits=None,
-                             legend_location = 'best', title = r'', saving=None, show=True):
+def plot(datasets, xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.', 
+         zoom_factor=0.1, x_limits=None,
+         legend_location='best', title=r'', saving=None, show=True):
     """
-    values: [x[], y[], dy[]]
-    approx: [k, b, dk, db]
-    zoom_factor: increase argument to zoom
-    approx_type: linear, hyperbola, exponential(b_val * np.exp(k_val / x_val))
-    xlabel, ylabel: label names
-    legend_location: 'best', 'upper (right/left)', 'bottom (right/left)'
-    title: title of the plot
-    saving: file path
+    datasets: список словарей вида:
+        {
+            'values': [x[], y[], dy[]],
+            'approx': [k, b, dk, db], (опционально)
+            'approx_type': 'linear' | 'hyperbola' | 'exponential',
+            'label': 'Эксперимент 1',
+            'color': 'firebrick'
+        }
     """
-    data = np.array(values)
-    x, y, dy = data[:, 0], data[:, 1], data[:, 2]
-    k, b, dk, db = approx if approx else (None, None, None, None)
-
-    # Включаем интерактивный режим (в некоторых IDE нужно 'qt', в других работает по умолчанию)
-    # plt.ion() 
-
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-
-    # 1. Расчет границ для масштабирования
-    x_range = x.max() - x.min()
-    y_range = y.max() - y.min()
     
-    # Автоматические границы с учетом зума
-    def_xlim = (x.min() - x_range * zoom_factor, x.max() + x_range * zoom_factor)
-    def_ylim = (y.min() - y_range * zoom_factor, y.max() + y_range * zoom_factor)
-    
-    # Линия для отрисовки (берем с запасом для красоты)
-    x_line = np.linspace(def_xlim[0], def_xlim[1], 100)
+    # Списки для автоматического определения границ
+    all_x, all_y = [], []
 
-    # 2. Отрисовка аппроксимации
-    if approx:
-        if approx_type == 'linear':
-            f = lambda k_val, b_val, x_val: k_val*x_val + b_val
-            formula_str = rf'$y = ({k:.3f} \pm {dk:.3f})x + ({b:.3f} \pm {db:.3f})$'
-        if approx_type == 'hyperbola':
-            f = lambda k_val, b_val, x_val: k_val/x_val + b_val
-            formula_str = rf'$y = \frac{{{k:.3f} \pm {dk:.3f}}}{{x}} + ({b:.3f} \pm {db:.3f})$'
-        if approx_type == 'exponential':
-            f = lambda k_val, b_val, x_val: b_val * np.exp(k_val / x_val)
-            formula_str = rf'$y = ({b:.3f} \pm {db:.3f}) e^{{({k:.3f} \pm {dk:.3f})/x}}$'
-
-        formula_label = (formula_str)
-
-        ax.plot(x_line, f(k, b, x_line), color='black', linewidth=1.5, label=formula_label, zorder=4)
+    for ds in datasets:
+        val = ds.get('values')
+        if val:
+            data = np.array(val)
+            x, y, dy = data[:, 0], data[:, 1], data[:, 2]
+            all_x.extend(x); all_y.extend(y)
+        else: 
+            all_x.extend([0, 100]); all_y.extend([0, 100])
+            
         
-        # Предельные прямые (пунктир)
-        ax.plot(x_line, f(k + dk, b - db, x_line), '--', color='gray', alpha=0.5, label='Предельные прямые', zorder=2)
-        ax.plot(x_line, f(k - dk, b + db, x_line), '--', color='gray', alpha=0.5, zorder=2)
+        color = ds.get('color', 'firebrick')
+        label = ds.get('label', 'Эксперимент')
+        approx = ds.get('approx')
+        approx_type = ds.get('approx_type', 'linear')
 
-    # 3. Экспериментальные точки
-    ax.errorbar(x, y, yerr=dy, fmt='o', color='firebrick', markersize=5, 
-                capsize=3, elinewidth=1.2, markeredgecolor='black', label='Эксперимент', zorder=5)
+        # 1. Отрисовка точек
+        ax.errorbar(x, y, yerr=dy, fmt='o', color=color, markersize=5, 
+                    capsize=3, elinewidth=1.2, markeredgecolor='black', 
+                    label=label, zorder=5) if val else None
 
-    # 4. Настройка сетки
+        # 2. Отрисовка аппроксимации
+        if approx:
+            k, b, dk, db = approx
+            # Создаем расширенный диапазон x для плавности линий
+            x_line = np.linspace(min(x) * (1 - zoom_factor), max(x) * (1 + zoom_factor), 200)
+            
+            if approx_type == 'linear':
+                f = lambda k_v, b_v, x_v: k_v * x_v + b_v
+                formula = rf'${label}: ({k:.2f} \pm {dk:.2f})x + ({b:.2f} \pm {db:.2f})$'
+            elif approx_type == 'hyperbola':
+                f = lambda k_v, b_v, x_v: k_v / x_v + b_v
+                formula = rf'${label}: \frac{{{k:.2f}}}{{x}} + {b:.2f}$'
+            elif approx_type == 'exponential':
+                f = lambda k_v, b_v, x_v: b_v * np.exp(k_v / x_v)
+                formula = rf'${label}: {b:.2f} e^{{{k:.2f}/x}}$'
+
+            ax.plot(x_line, f(k, b, x_line), color=color, linewidth=1.5, label=formula, zorder=4)
+            
+            # Предельные прямые (опционально можно добавить и сюда)
+            ax.plot(x_line, f(k + dk, b - db, x_line), '--', color=color, alpha=0.2, zorder=2)
+            ax.plot(x_line, f(k - dk, b + db, x_line), '--', color=color, alpha=0.2, zorder=2)
+
+    # 3. Настройка осей и сетки
     ax.grid(which='major', color='#B0B0B0', linestyle='-', linewidth=0.7)
     ax.grid(which='minor', color='#E0E0E0', linestyle=':', linewidth=0.5)
     ax.minorticks_on()
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
 
-    # 5. Оформление осей и легенды
     ax.set_xlabel(xlabel, fontsize=12)
     ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_title(title, size=16)
+
+    # Авто-масштабирование
+    if not x_limits:
+        x_min, x_max = min(all_x), max(all_x)
+        dx = (x_max - x_min) * zoom_factor
+        ax.set_xlim(x_min - dx, x_max + dx)
+    else:
+        ax.set_xlim(x_limits)
+
+    ax.legend(loc=legend_location, fontsize=9, frameon=True, shadow=True)
     
-    # Легенда в "окошке"
-    ax.legend(loc=legend_location, fontsize=10, frameon=True, fancybox=True, shadow=True, 
-              facecolor='white', edgecolor='black', borderpad=1)
-    ax.set_title(fr'{title}', size=20)
-
-    # Применение масштабирования
-    ax.set_xlim(x_limits if x_limits else def_xlim)
-    ax.set_ylim(y_limits if y_limits else def_ylim)
-
-    if saving != None: 
-        plt.savefig(f'{saving}')
-
+    if saving: plt.savefig(saving)
     plt.tight_layout()
-    plt.show() if show else None
+    if show: plt.show()
 
 def plot_grain_dist(values, cell_width=1.5, x_range_cells=None, 
                     density=False, xlabel=r'$x$, см', ylabel=None, 
