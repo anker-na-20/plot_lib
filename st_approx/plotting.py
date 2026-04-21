@@ -16,6 +16,13 @@ def plot(datasets, xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.',
             'label': 'Эксперимент 1',
             'color': 'firebrick'
         }
+    xlabel, ylabel: подписи осей
+    zoom_factor: сколько добавить к границам по X (в процентах от диапазона) для лучшего отображения
+    x_limits: (min, max) — если None, то границы определяются автоматически по данным с учетом zoom_factor
+    legend_location: расположение легенды (по умолчанию 'best')
+    title: заголовок графика
+    saving: путь для сохранения графика (если None, то график не сохраняется)
+    show: показывать график (True) или только сохранять (False)
     """
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     
