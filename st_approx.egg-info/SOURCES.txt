@@ -1,0 +1,9 @@
+setup.py
+st_approx/__init__.py
+st_approx/approximation.py
+st_approx/plotting.py
+st_approx.egg-info/PKG-INFO
+st_approx.egg-info/SOURCES.txt
+st_approx.egg-info/dependency_links.txt
+st_approx.egg-info/requires.txt
+st_approx.egg-info/top_level.txt
