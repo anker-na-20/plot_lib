@@ -2,76 +2,61 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
-from scipy.stats import norm
 
 def plot(datasets, xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.', 
          zoom_factor=0.1, x_limits=None,
          legend_location='best', title=r'', saving=None, show=True):
-    """
-    datasets: список словарей вида:
-        {
-            'values': [x[], y[], dy[]],
-            'approx': [k, b, dk, db], (опционально)
-            'approx_type': 'linear' | 'hyperbola' | 'exponential',
-            'label': 'Эксперимент 1',
-            'color': 'firebrick'
-        }
-    xlabel, ylabel: подписи осей
-    zoom_factor: сколько добавить к границам по X (в процентах от диапазона) для лучшего отображения
-    x_limits: (min, max) — если None, то границы определяются автоматически по данным с учетом zoom_factor
-    legend_location: расположение легенды (по умолчанию 'best')
-    title: заголовок графика
-    saving: путь для сохранения графика (если None, то график не сохраняется)
-    show: показывать график (True) или только сохранять (False)
-    """
-    fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     
-    # Списки для автоматического определения границ
+    fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     all_x, all_y = [], []
 
     for ds in datasets:
         val = ds.get('values')
-        if val:
-            data = np.array(val)
-            x, y, dy = data[:, 0], data[:, 1], data[:, 2]
-            all_x.extend(x); all_y.extend(y)
-        else: 
-            all_x.extend([0, 100]); all_y.extend([0, 100])
-            
+        if val is None: continue 
+        
+        data = np.array(val)
+        x, y, dy = data[:, 0], data[:, 1], data[:, 2]
+        all_x.extend(x); all_y.extend(y)
         
         color = ds.get('color', 'firebrick')
         label = ds.get('label', 'Эксперимент')
-        approx = ds.get('approx')
-        approx_type = ds.get('approx_type', 'linear')
-
+        
         # 1. Отрисовка точек
         ax.errorbar(x, y, yerr=dy, fmt='o', color=color, markersize=5, 
                     capsize=3, elinewidth=1.2, markeredgecolor='black', 
-                    label=label, zorder=5) if val else None
+                    label=label, zorder=5)
 
-        # 2. Отрисовка аппроксимации
-        if approx:
-            k, b, dk, db = approx
-            # Создаем расширенный диапазон x для плавности линий
-            x_line = np.linspace(min(x) * (1 - zoom_factor), max(x) * (1 + zoom_factor), 200)
+        # 2. Отрисовка универсальной аппроксимации
+        fit_res = ds.get('fit_result') # Берем словарь из нашей функции universal_fit
+        if fit_res:
+            coeffs = fit_res['coeffs']
+            errors = fit_res['errors']
+            degs = fit_res['degrees']
+
+            # Создаем сетку для плавной линии
+            x_min, x_max = min(x), max(x)
+            margin = (x_max - x_min) * zoom_factor
+            x_line = np.linspace(x_min - margin, x_max + margin, 500)
+
+            # Универсальный расчет y для любых степеней: y = sum(k_i * x^d_i)
+            def apply_fit(x_v, c_v):
+                return sum(c * x_v**d for c, d in zip(c_v, degs))
+
+            y_line = apply_fit(x_line, coeffs)
             
-            if approx_type == 'linear':
-                f = lambda k_v, b_v, x_v: k_v * x_v + b_v
-                formula = rf'${label}: ({k:.2f} \pm {dk:.2f})x + ({b:.2f} \pm {db:.2f})$'
-            elif approx_type == 'hyperbola':
-                f = lambda k_v, b_v, x_v: k_v / x_v + b_v
-                formula = rf'${label}: \frac{{{k:.2f}}}{{x}} + {b:.2f}$'
-            elif approx_type == 'exponential':
-                f = lambda k_v, b_v, x_v: b_v * np.exp(k_v / x_v)
-                formula = rf'${label}: {b:.2f} e^{{{k:.2f}/x}}$'
+            # Формируем красивую подпись (берем первые пару слагаемых для краткости)
+            formula_parts = [f"{c:.2f}x^{{{d}}}" for c, d in zip(coeffs, degs)]
+            formula_str = f"${label}: y = " + " + ".join(formula_parts[:10]) + "...$"
 
-            ax.plot(x_line, f(k, b, x_line), color=color, linewidth=1.5, label=formula, zorder=4)
+            ax.plot(x_line, y_line, color=color, linewidth=1.8, label=formula_str, zorder=4)
             
-            # Предельные прямые (опционально можно добавить и сюда)
-            ax.plot(x_line, f(k + dk, b - db, x_line), '--', color=color, alpha=0.2, zorder=2)
-            ax.plot(x_line, f(k - dk, b + db, x_line), '--', color=color, alpha=0.2, zorder=2)
+            # Отрисовка коридора погрешности (опционально)
+            # Используем верхнюю и нижнюю границы коэффициентов
+            y_high = apply_fit(x_line, coeffs + errors)
+            y_low = apply_fit(x_line, coeffs - errors)
+            ax.fill_between(x_line, y_low, y_high, color=color, alpha=0.15, zorder=2)
 
-    # 3. Настройка осей и сетки
+    # 3. Дизайн и сетка (сохраняем ваш стиль)
     ax.grid(which='major', color='#B0B0B0', linestyle='-', linewidth=0.7)
     ax.grid(which='minor', color='#E0E0E0', linestyle=':', linewidth=0.5)
     ax.minorticks_on()
@@ -83,12 +68,12 @@ def plot(datasets, xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.',
     ax.set_title(title, size=16)
 
     # Авто-масштабирование
-    if not x_limits:
+    if x_limits:
+        ax.set_xlim(x_limits)
+    elif all_x:
         x_min, x_max = min(all_x), max(all_x)
         dx = (x_max - x_min) * zoom_factor
         ax.set_xlim(x_min - dx, x_max + dx)
-    else:
-        ax.set_xlim(x_limits)
 
     ax.legend(loc=legend_location, fontsize=9, frameon=True, shadow=True)
     
@@ -101,16 +86,17 @@ def plot_grain_dist(values, cell_width=1.5, x_range_cells=None,
                     zoom_factor=0.1, x_limits=None, y_limits=None,
                     title=r'', saving=None, legend_location='best', h=None):
     """
-    values: [[количество_зерен, номер_ячейки], ...]
+    values: [[количество_элементов, номер_ячейки], ...]
     cell_width: ширина ячейки в см
     x_range_cells: (min_idx, max_idx) — сколько ячеек показать (напр. от -10 до 10)
-    density: если True, нормирует Y (доля зерен)
+    density: если True, нормирует Y (доля элементов от общего количества) и рисует гауссову кривую
+    h: параметр гауссовой кривой (если density=True). Если None, то рассчитывается по формуле h = sqrt(N/(2*cell_width*sum((cell_idx^2)*count)))
     """
     data = np.array(values)
-    raw_counts = data[:, 0]        # Количество зерен (высота)
+    raw_counts = data[:, 0]        # Количество элементов (высота)
     cell_indices = data[:, 1].astype(int) # Номера ячеек (позиция)
 
-    # 1. Создаем словарь: {номер_ячейки: количество_зерен}
+    # 1. Создаем словарь: {номер_ячейки: количество_элементов}
     # Это нужно на случай, если в данных пропущены пустые ячейки
     dist_dict = dict(zip(cell_indices, raw_counts))
 
@@ -122,7 +108,7 @@ def plot_grain_dist(values, cell_width=1.5, x_range_cells=None,
 
     # Генерируем полный список индексов (чтобы пустые ячейки тоже были на графике)
     plot_indices = np.arange(min_idx, max_idx + 1)
-    # Берем количество зерен из словаря, если ячейки нет — ставим 0
+    # Берем количество элементов из словаря, если ячейки нет — ставим 0
     plot_counts = np.array([float(dist_dict.get(i, 0)) for i in plot_indices])
     
     # Центры ячеек в сантиметрах
@@ -138,9 +124,9 @@ def plot_grain_dist(values, cell_width=1.5, x_range_cells=None,
             f = lambda x_val, h_val: (h_val/np.sqrt(math.pi)) * np.exp(-1*(x_val*h_val)**2)
             x_line = np.linspace(x_centers.min() - cell_width, x_centers.max() + cell_width, 200)
             label_str = rf'Гауссова кривая: $h={h:.3f}$ {total:.3f}'
-        ylabel = ylabel or 'Доля зерен (отн. ед.)'
+        ylabel = ylabel or 'Доля элементов (отн. ед.)'
     else:
-        ylabel = ylabel or 'Количество зерен, шт'
+        ylabel = ylabel or 'Количество элементов, шт'
 
 
     # 4. Отрисовка
@@ -148,7 +134,7 @@ def plot_grain_dist(values, cell_width=1.5, x_range_cells=None,
     
     # Рисуем ячейки. align='center' ставит центр столбика ровно на координату X
     ax.bar(x_centers, plot_counts, width=cell_width * 0.98, 
-           color='firebrick', edgecolor='black', alpha=0.8, zorder=3, label='Распределение зерен')
+           color='firebrick', edgecolor='black', alpha=0.8, zorder=3, label='Распределение элементов по ячейкам')
     ax.plot(x_line, f(x_line, h), color='black', linestyle='--', label=label_str, zorder=4) if density else None
 
     # 5. Настройка Zoom и лимитов
