@@ -2,11 +2,6 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
-from scipy.stats import norm
-
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
 
 def plot(datasets, xlabel=r'$x$, усл. ед.', ylabel=r'$y$, усл. ед.', 
          zoom_factor=0.1, x_limits=None,
