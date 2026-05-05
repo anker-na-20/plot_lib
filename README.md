@@ -29,25 +29,48 @@ $$ dk = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{1}{\sigma_i}$$
 $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 $$\text{где} \ \Delta - \text{определитель матрицы системы}$$
 
-В коде же все это дело не отличается красотой. В будущем перепишу на матрицы.
+Переписал под векторизацию и рассширил пулл степеней полинома. Добавил автоподбор.
 
 ## Графики 
-Тут просто. 
+Тут просто. (Все переделал и теперь еще проще) 
 Есть два метода: плот **точек с зависимостью** (линейная, гипербола и экспонента) или без (зависимости или точек) и плот гистограммы. 
 ### Точки и зависимость
 Можно построить просто точки или просто зависимость. Работает так:
  - Подается список словарей вида:
-    ```
-      {
-      'values': [x[], y[], dy[]] (опционально), 
-      'approx': [k, b, dk, db] (опционально),
-      'approx_type': 'linear' | 'hyperbola' | 'exponential',
-      'label': 'Эксперимент 1',
-      'color': 'firebrick'
-      }
+    ```python
+      datasets = [
+    {
+        'values': C_alum,
+        'fit_result': st.universal_fit(C_alum, degrees=[3]),
+        'label': 'Алюминий',
+        'color': 'royalblue'
+    },
+    {
+        'values': C_stal,
+        'fit_result': st.universal_fit(C_stal, degrees=[3]),
+        'label': 'Сталь',
+        'color': 'red'
+    },
+    {
+        'values': C_latun,
+        'fit_result': st.universal_fit(C_latun, degrees=[3]),
+        'label': 'Латунь',
+        'color': 'deeppink'
+    }
+    ]
     ```
  - Указываются остальные параметры (название, зум, путь сохранения и тп)
  - Плот
+   ```python
+   st.plot(
+    datasets, 
+    title='Зависимость удельной теплоемкости алюминия от температуры',
+    xlabel=r'$T, ^\circ C$', 
+    ylabel=r'$C$, Дж/кг К',
+    zoom_factor=0.05,
+    saving='Path/alum_stal_latun.png'
+    )
+   ```
 ### Гистограмма 
 Сделана для проверки гауссова распределения. 
 - Подается список вида
@@ -118,7 +141,7 @@ $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 
 where $\Delta$ is the determinant of the system matrix.
 
-*Current Status:* The internal code is a bit messy; a future refactor using matrix operations is planned.
+I fixed code and implemented vectorization.
 
 ## Plotting
 This module provides two main methods: plotting data points with fits and plotting histograms.
@@ -128,16 +151,39 @@ Supports plotting experimental points, their fits (linear, hyperbolic, or expone
 **Workflow:**
 - Pass a list of dictionaries in the following format:
     ```python
+    datasets = [
     {
-      'values': [x[], y[], dy[]] (optional), 
-      'approx': [k, b, dk, db] (optional),
-      'approx_type': 'linear' | 'hyperbola' | 'exponential',
-      'label': 'Experiment 1',
-      'color': 'firebrick'
+        'values': C_alum,
+        'fit_result': st.universal_fit(C_alum, degrees=[3]),
+        'label': 'Алюминий',
+        'color': 'royalblue'
+    },
+    {
+        'values': C_stal,
+        'fit_result': st.universal_fit(C_stal, degrees=[3]),
+        'label': 'Сталь',
+        'color': 'red'
+    },
+    {
+        'values': C_latun,
+        'fit_result': st.universal_fit(C_latun, degrees=[3]),
+        'label': 'Латунь',
+        'color': 'deeppink'
     }
+    ]
     ```
 - Configure additional parameters (title, zoom, save path, etc.).
 - Call the plot function.
+  ```python
+  st.plot(
+    datasets, 
+    title='Зависимость удельной теплоемкости алюминия от температуры',
+    xlabel=r'$T, ^\circ C$', 
+    ylabel=r'$C$, Дж/кг К',
+    zoom_factor=0.05,
+    saving='Path/alum_stal_latun.png'
+    )
+  ```
 
 ### Histograms
 Designed for Gaussian distribution verification.
