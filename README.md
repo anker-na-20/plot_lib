@@ -8,7 +8,7 @@
 Все функции рабиты на два лагеря: аппроксимация и построение. Хорошо работают как в паре, так и по отдельности.
 ## Аппроксимация
 Самая лоукод часть функции и самая приятная с токи зрения математики. 
-Здесь реализован метод $$\chi ^2 $$ для многочлена 1 и -1 степени (прямая или гипербола). 
+Здесь реализован метод $$\chi ^2 $$ для любого полинома. 
 Как выглядит на бумаге: 
 
 $$\chi^2 = \sum_{i=1}^{N} \frac{ \Delta y_i^2}{\sigma_i^2 }$$
@@ -21,7 +21,7 @@ $$
 \end{cases}
 $$
 
-Решая такую систему, получим $$k$$ и $$b$$ для линейной зависимости.
+Решая такую систему, получим $$k$$ и $$b$$ для линейной зависимости. Соответственно, наращивая степень, переходим 
 Погрешности коэффициентов: 
 
 $$s^2 = \frac{ 1} {N-2} \sum \frac{\Delta y^2 }{ \delta_i^2}$$
@@ -29,7 +29,8 @@ $$ dk = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{1}{\sigma_i}$$
 $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 $$\text{где} \ \Delta - \text{определитель матрицы системы}$$
 
-Переписал под векторизацию и рассширил пулл степеней полинома. Добавил автоподбор.
+Переписал код. Происходит все тоже самое, только оптимизированно в разы. На вход получили точки и диапазон степеней, которые хотим увидеть. 
+Внутри создаются взвешенные (по ошибкам) матрицы точек и значений. С помощью метода np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)) решаем систему линейных уравнений и на выходе получаем коэффициенты. В качестве ошибок по коэффициентам достаем диагональные элементы ковариационной матрицы значений ($ cov = (A_w^T \times A_w)^{-1}$). На выходе получаем словарь из: коэффициентов, их ошибок, формулу(строка), приведенный $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, где $dof$ - количество степеней свободы) и актуальные степени полинома (есть автоподбор, который не дописан).
 
 ## Графики 
 Тут просто. (Все переделал и теперь еще проще) 
@@ -141,7 +142,7 @@ $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 
 where $\Delta$ is the determinant of the system matrix.
 
-I fixed code and implemented vectorization.
+nside, error-weighted matrices of points and values are created. Using the method np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)), we solve the system of linear equations and obtain the coefficients at the output. As errors for the coefficients, we extract the diagonal elements of the covariance matrix of values($ cov = (A_w^T \times A_w)^{-1}$). The output is a dictionary consisting of: coefficients, their errors, the formula (string), the reduced $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, where $dof$ - is the number of degrees of freedom), and the actual polynomial degrees (there is an auto-selection feature, which is not yet fully implemented).
 
 ## Plotting
 This module provides two main methods: plotting data points with fits and plotting histograms.
