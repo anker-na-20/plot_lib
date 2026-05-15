@@ -30,7 +30,7 @@ $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 $$\text{где} \ \Delta - \text{определитель матрицы системы}$$
 
 Переписал код. Происходит все тоже самое, только оптимизированно в разы. На вход получили точки и диапазон степеней, которые хотим увидеть. 
-Внутри создаются взвешенные (по ошибкам) матрицы точек и значений. С помощью метода np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)) решаем систему линейных уравнений и на выходе получаем коэффициенты. В качестве ошибок по коэффициентам достаем диагональные элементы ковариационной матрицы значений ($ cov = (A_w^T \times A_w)^{-1}$). На выходе получаем словарь из: коэффициентов, их ошибок, формулу(строка), приведенный $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, где $dof$ - количество степеней свободы) и актуальные степени полинома (есть автоподбор, который не дописан).
+Внутри создаются взвешенные (по ошибкам) матрицы точек и значений. С помощью метода np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)) решаем систему линейных уравнений и на выходе получаем коэффициенты. В качестве ошибок по коэффициентам достаем диагональные элементы ковариационной матрицы значений ($cov = (A_w^T \times A_w)^{-1}$). На выходе получаем словарь из: коэффициентов, их ошибок, формулу(строка), приведенный $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, где $dof$ - количество степеней свободы) и актуальные степени полинома (есть автоподбор, который не дописан).
 
 ## Графики 
 Тут просто. (Все переделал и теперь еще проще) 
@@ -142,7 +142,7 @@ $$ db = s \cdot \frac{1}{\Delta} \cdot \sum_{i}^{n} \frac{x^2}{\sigma_i}$$
 
 where $\Delta$ is the determinant of the system matrix.
 
-nside, error-weighted matrices of points and values are created. Using the method np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)), we solve the system of linear equations and obtain the coefficients at the output. As errors for the coefficients, we extract the diagonal elements of the covariance matrix of values($ cov = (A_w^T \times A_w)^{-1}$). The output is a dictionary consisting of: coefficients, their errors, the formula (string), the reduced $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, where $dof$ - is the number of degrees of freedom), and the actual polynomial degrees (there is an auto-selection feature, which is not yet fully implemented).
+nside, error-weighted matrices of points and values are created. Using the method np.linalg.lstsq (SVD - [Singualar value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition)), we solve the system of linear equations and obtain the coefficients at the output. As errors for the coefficients, we extract the diagonal elements of the covariance matrix of values($cov = (A_w^T \times A_w)^{-1}$). The output is a dictionary consisting of: coefficients, their errors, the formula (string), the reduced $\chi^2_{red}$ ($\frac{\chi^2}{dof}$, where $dof$ - is the number of degrees of freedom), and the actual polynomial degrees (there is an auto-selection feature, which is not yet fully implemented).
 
 ## Plotting
 This module provides two main methods: plotting data points with fits and plotting histograms.
